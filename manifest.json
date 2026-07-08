@@ -1,0 +1,16 @@
+{
+  "name": "Vacations",
+  "details": "Board-level vacation planner for Trello teams.",
+  "icon": {
+    "url": "./images/icon.png"
+  },
+  "author": "Your Name",
+  "capabilities": [
+    "board-buttons"
+  ],
+  "connectors": {
+    "iframe": {
+      "url": "./index.html"
+    }
+  }
+}

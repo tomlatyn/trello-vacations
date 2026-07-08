@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Vacations</title>
+  <link rel="stylesheet" href="../styles/vacations.css">
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <section class="editor">
+      <div class="editor-heading">
+        <div>
+          <h1>My Vacation</h1>
+          <p id="member-name">Loading...</p>
+        </div>
+        <div class="active-count" aria-label="Active vacations">
+          <img src="../images/icon.png" alt="">
+          <span id="active-count">0</span>
+        </div>
+      </div>
+
+      <form id="vacation-form" class="range-form">
+        <label>
+          <span>Start</span>
+          <input id="start-date" type="date" required>
+        </label>
+        <label>
+          <span>End</span>
+          <input id="end-date" type="date" required>
+        </label>
+        <label class="note-field">
+          <span>Note</span>
+          <input id="note" type="text" maxlength="80" placeholder="Optional">
+        </label>
+        <button type="submit">Add</button>
+      </form>
+
+      <div id="my-ranges" class="my-ranges"></div>
+      <p id="message" class="message" role="status"></p>
+    </section>
+
+    <section class="timeline-section">
+      <div class="section-heading">
+        <h2>Team Schedule</h2>
+        <div id="range-label" class="range-label"></div>
+      </div>
+      <div id="timeline" class="timeline"></div>
+    </section>
+  </main>
+
+  <script src="../js/views/vacations.js"></script>
+</body>
+</html>
