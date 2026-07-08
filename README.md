@@ -5,6 +5,8 @@ A board-level Trello Power-Up for tracking team vacations.
 ## Features
 
 - Board button with vacation icon and the number of currently active vacations.
+- Card front badge showing how many assigned members are on vacation today.
+- Card detail badge listing assigned members who are on vacation today.
 - Board bar dashboard with all board members who have saved vacation dates.
 - Current member can add and remove only their own vacation ranges from the UI.
 - Vacation data is stored in board-scoped shared Power-Up data.
@@ -31,3 +33,19 @@ same values manually in the Power-Up admin UI.
 Vacation data is stored under board/shared pluginData key `vacations`.
 Everyone who can read the board can read this data. The UI only lets the
 current Trello member edit their own ranges.
+
+## Local Preview
+
+Run a static server from this folder:
+
+```sh
+python3 -m http.server 8080
+```
+
+Then open:
+
+```text
+http://localhost:8080/local-preview/
+```
+
+The preview uses seeded localStorage data and a mock Trello SDK.
