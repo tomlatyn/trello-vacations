@@ -24,24 +24,27 @@ t.subscribeToThemeChanges(function(theme) {
 });
 
 function parseDateOnly(value) {
-  if (!value) {
+  if (typeof value !== 'string') {
     return null;
   }
 
-  var separator = value.indexOf('.') > -1 ? '.' : '-';
-  var parts = value.split(separator).map(function(part) {
-    return parseInt(part, 10);
-  });
+  var isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  var displayMatch = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(value);
 
-  if (parts.length !== 3 || parts.some(isNaN)) {
+  if (!isoMatch && !displayMatch) {
     return null;
   }
 
-  if (separator === '.') {
-    return new Date(parts[2], parts[1] - 1, parts[0]);
+  var year = Number(isoMatch ? isoMatch[1] : displayMatch[3]);
+  var month = Number(isoMatch ? isoMatch[2] : displayMatch[2]) - 1;
+  var day = Number(isoMatch ? isoMatch[3] : displayMatch[1]);
+  var date = new Date(year, month, day);
+
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+    return null;
   }
 
-  return new Date(parts[0], parts[1] - 1, parts[2]);
+  return date;
 }
 
 function formatDateOnly(date) {
@@ -154,14 +157,14 @@ function getMembersWithVacations() {
       var boardMember = state.boardMembers.find(function(member) {
         return member.id === memberId;
       });
-      var stored = state.vacations.members[memberId];
+      var stored = getStoredMember(memberId);
 
       return {
         id: memberId,
         fullName: stored.fullName || (boardMember && boardMember.fullName),
         username: stored.username || (boardMember && boardMember.username),
         initials: stored.initials || (boardMember && boardMember.initials),
-        ranges: stored.ranges || [],
+        ranges: getValidRanges(stored),
       };
     })
     .filter(function(member) {
@@ -195,6 +198,10 @@ function buildDaysBetween(start, end) {
 }
 
 function isRangeActiveOn(range, date) {
+  if (!range) {
+    return false;
+  }
+
   var start = parseDateOnly(range.start);
   var end = parseDateOnly(range.end);
 
@@ -223,13 +230,31 @@ function getMemberInitials(member) {
 }
 
 function getStoredMember(memberId) {
-  return state.vacations.members[memberId] || { memberId: memberId, ranges: [] };
+  var member = state.vacations.members[memberId];
+
+  if (!member || typeof member !== 'object' || Array.isArray(member)) {
+    return { memberId: memberId, ranges: [] };
+  }
+
+  return member;
+}
+
+function getValidRanges(member) {
+  if (!member || !Array.isArray(member.ranges)) {
+    return [];
+  }
+
+  return member.ranges.filter(function(range) {
+    var start = range && parseDateOnly(range.start);
+    var end = range && parseDateOnly(range.end);
+    return start && end && start <= end;
+  });
 }
 
 function normalizeVacations(raw) {
-  var vacations = raw || {};
+  var vacations = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
 
-  if (!vacations.members) {
+  if (!vacations.members || typeof vacations.members !== 'object' || Array.isArray(vacations.members)) {
     vacations.members = {};
   }
 
@@ -245,14 +270,21 @@ function loadData() {
   ]).then(function(results) {
     var boardData = results[1];
     state.currentMember = results[0];
-    state.boardMembers = boardData.members || boardData || [];
+    state.boardMembers = boardData && (boardData.members || boardData) || [];
+
+    if (!Array.isArray(state.boardMembers)) {
+      state.boardMembers = [];
+    }
+
     state.vacations = normalizeVacations(results[2]);
     render();
   });
 }
 
-function saveVacations() {
-  return t.set('board', 'shared', STORAGE_KEY, state.vacations);
+function saveVacations(vacations) {
+  return t.set('board', 'shared', STORAGE_KEY, vacations).then(function() {
+    state.vacations = vacations;
+  });
 }
 
 function setMessage(message) {
@@ -309,7 +341,7 @@ function render() {
 function renderMine() {
   var wrapper = document.getElementById('my-ranges');
   var current = getStoredMember(state.currentMember.id);
-  var ranges = current.ranges || [];
+  var ranges = getValidRanges(current);
   var today = todayDateOnly();
   var activeRanges = sortRangesFromFurthest(ranges.filter(function(range) {
     return !isRangeFinished(range, today);
@@ -393,12 +425,12 @@ function getHistoryEntries() {
   var entries = [];
 
   Object.keys(state.vacations.members).forEach(function(memberId) {
-    var stored = state.vacations.members[memberId];
+    var stored = getStoredMember(memberId);
     var boardMember = state.boardMembers.find(function(member) {
       return member.id === memberId;
     });
     var memberName = stored.fullName || (boardMember && boardMember.fullName) || stored.username || memberId;
-    var ranges = stored.ranges || [];
+    var ranges = getValidRanges(stored);
 
     ranges.forEach(function(range) {
       entries.push({
@@ -588,6 +620,15 @@ function renderScheduleGrid(container, days, membersWithVacations, emptyText) {
 
       if (vacation) {
         classes.push('vacation');
+
+        if (isSameDay(day, parseDateOnly(vacation.start))) {
+          classes.push('vacation-start');
+        }
+
+        if (isSameDay(day, parseDateOnly(vacation.end))) {
+          classes.push('vacation-end');
+        }
+
         cell.title = formatRangeDisplay(vacation);
       }
 
@@ -636,6 +677,7 @@ function renderHistory() {
 function openHistory() {
   var timeline = renderHistory();
   document.getElementById('history-panel').classList.remove('hidden');
+  document.getElementById('history-close-button').focus();
 
   if (timeline) {
     window.requestAnimationFrame(function() {
@@ -646,6 +688,7 @@ function openHistory() {
 
 function closeHistory() {
   document.getElementById('history-panel').classList.add('hidden');
+  document.getElementById('history-button').focus();
 }
 
 function renderTimeline() {
@@ -657,8 +700,8 @@ function renderTimeline() {
   var activeMemberIds = [];
 
   Object.keys(state.vacations.members).forEach(function(memberId) {
-    var memberRecord = state.vacations.members[memberId];
-    var ranges = memberRecord.ranges || [];
+    var memberRecord = getStoredMember(memberId);
+    var ranges = getValidRanges(memberRecord);
 
     if (ranges.some(function(range) { return isRangeActiveOn(range, today); })) {
       activeMemberIds.push(memberId);
@@ -670,22 +713,27 @@ function renderTimeline() {
   renderScheduleGrid(timeline, days, getMembersWithVacations(), 'No vacations have been saved on this board yet.');
 }
 
-function ensureCurrentMemberRecord() {
+function ensureCurrentMemberRecord(vacations) {
   var member = state.currentMember;
+  var target = vacations || state.vacations;
 
-  if (!state.vacations.members[member.id]) {
-    state.vacations.members[member.id] = {
+  if (!target.members[member.id] || typeof target.members[member.id] !== 'object' || Array.isArray(target.members[member.id])) {
+    target.members[member.id] = {
       memberId: member.id,
       ranges: [],
     };
   }
 
-  state.vacations.members[member.id].fullName = member.fullName;
-  state.vacations.members[member.id].username = member.username;
-  state.vacations.members[member.id].initials = member.initials;
-  state.vacations.members[member.id].updatedAt = new Date().toISOString();
+  target.members[member.id].fullName = member.fullName;
+  target.members[member.id].username = member.username;
+  target.members[member.id].initials = member.initials;
+  target.members[member.id].updatedAt = new Date().toISOString();
 
-  return state.vacations.members[member.id];
+  return target.members[member.id];
+}
+
+function createRangeId() {
+  return state.currentMember.id + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
 }
 
 function addRange(event) {
@@ -701,18 +749,25 @@ function addRange(event) {
     return;
   }
 
-  var normalizedStart = start <= end ? start : end;
-  var normalizedEnd = start <= end ? end : start;
+  if (end < start) {
+    setMessage('End date must be on or after the start date.');
+    return;
+  }
 
-  var memberRecord = ensureCurrentMemberRecord();
-  memberRecord.ranges = memberRecord.ranges || [];
-  memberRecord.ranges.push({
-    id: String(Date.now()),
-    start: formatDateOnly(normalizedStart),
-    end: formatDateOnly(normalizedEnd),
-  });
+  var range = {
+    id: createRangeId(),
+    start: formatDateOnly(start),
+    end: formatDateOnly(end),
+  };
 
-  saveVacations()
+  t.get('board', 'shared', STORAGE_KEY, { version: 1, members: {} })
+    .then(function(latest) {
+      var vacations = normalizeVacations(latest);
+      var memberRecord = ensureCurrentMemberRecord(vacations);
+      memberRecord.ranges = Array.isArray(memberRecord.ranges) ? memberRecord.ranges : [];
+      memberRecord.ranges.push(range);
+      return saveVacations(vacations);
+    })
     .then(function() {
       if (state.startPicker && state.endPicker) {
         state.startPicker.clear();
@@ -731,16 +786,20 @@ function addRange(event) {
 }
 
 function removeRange(rangeId) {
-  var memberRecord = ensureCurrentMemberRecord();
-  memberRecord.ranges = (memberRecord.ranges || []).filter(function(range) {
-    return range.id !== rangeId;
-  });
+  t.get('board', 'shared', STORAGE_KEY, { version: 1, members: {} })
+    .then(function(latest) {
+      var vacations = normalizeVacations(latest);
+      var memberRecord = ensureCurrentMemberRecord(vacations);
+      memberRecord.ranges = (Array.isArray(memberRecord.ranges) ? memberRecord.ranges : []).filter(function(range) {
+        return range.id !== rangeId;
+      });
 
-  if (memberRecord.ranges.length === 0) {
-    delete state.vacations.members[state.currentMember.id];
-  }
+      if (memberRecord.ranges.length === 0) {
+        delete vacations.members[state.currentMember.id];
+      }
 
-  saveVacations()
+      return saveVacations(vacations);
+    })
     .then(function() {
       setMessage('');
       render();
@@ -755,6 +814,13 @@ document.getElementById('history-button').addEventListener('click', openHistory)
 document.getElementById('history-close-button').addEventListener('click', closeHistory);
 document.getElementById('history-panel').addEventListener('click', function(event) {
   if (event.target.id === 'history-panel') {
+    closeHistory();
+  }
+});
+document.addEventListener('keydown', function(event) {
+  var panel = document.getElementById('history-panel');
+
+  if (event.key === 'Escape' && !panel.classList.contains('hidden')) {
     closeHistory();
   }
 });

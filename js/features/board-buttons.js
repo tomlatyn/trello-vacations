@@ -9,19 +9,26 @@ function resolveAssetUrl(path) {
 }
 
 function parseDateOnly(value) {
-  if (!value) {
+  if (typeof value !== 'string') {
     return null;
   }
 
-  var parts = value.split('-').map(function(part) {
-    return parseInt(part, 10);
-  });
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 
-  if (parts.length !== 3 || parts.some(isNaN)) {
+  if (!match) {
     return null;
   }
 
-  return new Date(parts[0], parts[1] - 1, parts[2]);
+  var year = Number(match[1]);
+  var month = Number(match[2]) - 1;
+  var day = Number(match[3]);
+  var date = new Date(year, month, day);
+
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+    return null;
+  }
+
+  return date;
 }
 
 function todayDateOnly() {
@@ -30,6 +37,10 @@ function todayDateOnly() {
 }
 
 function isVacationActive(range, today) {
+  if (!range) {
+    return false;
+  }
+
   var start = parseDateOnly(range.start);
   var end = parseDateOnly(range.end);
 
@@ -64,12 +75,11 @@ function boardButtonsHandler(t) {
       },
       text: '(' + countActiveVacations(vacations) + ')',
       callback: function(t) {
-        return t.boardBar({
+        return t.modal({
           url: './views/vacations.html',
-          height: 520,
-          resizable: true,
+          fullscreen: true,
           title: 'Vacations',
-          accentColor: '#0079bf',
+          accentColor: '#c9372c',
         });
       },
       condition: 'signedIn',

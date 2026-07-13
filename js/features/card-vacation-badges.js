@@ -1,20 +1,34 @@
 var VACATION_BADGE_ICON = './images/icon.png';
 var VACATION_BADGE_STORAGE_KEY = 'vacations';
+var VACATION_BADGE_ASSET_BASE = document.currentScript && document.currentScript.src
+  ? new URL('../../', document.currentScript.src).href
+  : window.location.href;
+
+function resolveVacationBadgeIconUrl(path) {
+  return new URL(path.replace(/^\.\//, ''), VACATION_BADGE_ASSET_BASE).href;
+}
 
 function parseVacationBadgeDate(value) {
-  if (!value) {
+  if (typeof value !== 'string') {
     return null;
   }
 
-  var parts = value.split('-').map(function(part) {
-    return parseInt(part, 10);
-  });
+  var match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
 
-  if (parts.length !== 3 || parts.some(isNaN)) {
+  if (!match) {
     return null;
   }
 
-  return new Date(parts[0], parts[1] - 1, parts[2]);
+  var year = Number(match[1]);
+  var month = Number(match[2]) - 1;
+  var day = Number(match[3]);
+  var date = new Date(year, month, day);
+
+  if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+    return null;
+  }
+
+  return date;
 }
 
 function formatVacationBadgeDate(value) {
@@ -35,6 +49,10 @@ function todayVacationBadgeDate() {
 }
 
 function isVacationBadgeRangeActive(range, today) {
+  if (!range) {
+    return false;
+  }
+
   var start = parseVacationBadgeDate(range.start);
   var end = parseVacationBadgeDate(range.end);
 
@@ -46,11 +64,16 @@ function isVacationBadgeRangeActive(range, today) {
 }
 
 function getCardMembers(card) {
-  return card.members || card.memberIds || card.idMembers || [];
+  if (!card) {
+    return [];
+  }
+
+  var members = card.members || card.memberIds || card.idMembers || [];
+  return Array.isArray(members) ? members : [];
 }
 
 function getCardMemberId(member) {
-  return typeof member === 'string' ? member : member.id;
+  return typeof member === 'string' ? member : member && member.id;
 }
 
 function getVacationMemberName(memberRecord, boardMember, memberId) {
@@ -66,6 +89,11 @@ function getActiveCardVacations(card, vacations, boardMembers) {
 
   return members.map(function(member) {
     var memberId = getCardMemberId(member);
+
+    if (!memberId) {
+      return null;
+    }
+
     var memberRecord = vacationMembers[memberId];
     var ranges = memberRecord && Array.isArray(memberRecord.ranges) ? memberRecord.ranges : [];
     var activeRange = ranges.find(function(range) {
@@ -96,8 +124,12 @@ function loadCardVacationData(t) {
   ]).then(function(results) {
     var card = results[0];
     var boardData = results[1];
-    var boardMembers = boardData.members || boardData || [];
+    var boardMembers = boardData && (boardData.members || boardData) || [];
     var vacations = results[2];
+
+    if (!Array.isArray(boardMembers)) {
+      boardMembers = [];
+    }
 
     return getActiveCardVacations(card, vacations, boardMembers);
   });
@@ -110,9 +142,9 @@ function cardBadgesHandler(t) {
     }
 
     return [{
-      icon: VACATION_BADGE_ICON,
+      icon: resolveVacationBadgeIconUrl(VACATION_BADGE_ICON),
       text: String(activeVacations.length),
-      color: 'orange',
+      color: 'red',
     }];
   });
 }
@@ -123,12 +155,12 @@ function cardDetailBadgesHandler(t) {
       return [];
     }
 
-    return [{
-      title: 'Vacations',
-      text: activeVacations.map(function(item) {
-        return item.name + ' (' + formatVacationBadgeDate(item.range.start) + ' - ' + formatVacationBadgeDate(item.range.end) + ')';
-      }).join(', '),
-      color: 'orange',
-    }];
+    return activeVacations.map(function(item) {
+      return {
+        title: item.name,
+        text: formatVacationBadgeDate(item.range.start) + ' - ' + formatVacationBadgeDate(item.range.end),
+        color: 'red',
+      };
+    });
   });
 }

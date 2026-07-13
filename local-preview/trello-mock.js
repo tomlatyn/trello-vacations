@@ -180,7 +180,7 @@ var TrelloMock = (function() {
         return Promise.resolve();
       },
 
-      boardBar: function(options) {
+      modal: function(options) {
         window.location.href = 'vacations.html';
         return Promise.resolve(options);
       },

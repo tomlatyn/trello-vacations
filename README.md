@@ -7,7 +7,7 @@ A board-level Trello Power-Up for tracking team vacations.
 - Board button with vacation icon and the number of currently active vacations.
 - Card front badge showing how many assigned members are on vacation today.
 - Card detail badge listing assigned members who are on vacation today.
-- Board bar dashboard with all board members who have saved vacation dates.
+- Fullscreen modal dashboard with all board members who have saved vacation dates.
 - Current member can add and remove only their own vacation ranges from the UI.
 - Vacation data is stored in board-scoped shared Power-Up data.
 
@@ -16,13 +16,13 @@ A board-level Trello Power-Up for tracking team vacations.
 1. Host this folder on a public HTTPS server, such as GitHub Pages.
 2. Create a new Power-Up at https://trello.com/power-ups/admin.
 3. Set the iframe connector URL to the hosted `index.html`.
-4. Enable the `board-buttons` capability.
+4. Enable the `board-buttons`, `card-badges`, and `card-detail-badges` capabilities.
 5. Enable the Power-Up on your Trello board from the Custom Power-Ups tab.
 
-For this repository, the GitHub Pages connector URL should be:
+If GitHub Pages publishes this repository at its standard project URL, the connector URL should be:
 
 ```text
-https://tomlatyn.github.io/trello-vacations/index.html
+https://tomlatyn.github.io/trello-powerups/trello-vacations/index.html
 ```
 
 Use `manifest.json` as the Power-Up manifest if Trello asks for it, or enter the
