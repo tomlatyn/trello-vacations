@@ -1,12 +1,4 @@
-var VACATIONS_ICON = './images/icon.png';
 var VACATIONS_STORAGE_KEY = 'vacations';
-var VACATIONS_ASSET_BASE = document.currentScript && document.currentScript.src
-  ? new URL('../../', document.currentScript.src).href
-  : window.location.href;
-
-function resolveAssetUrl(path) {
-  return new URL(path.replace(/^\.\//, ''), VACATIONS_ASSET_BASE).href;
-}
 
 function parseDateOnly(value) {
   if (typeof value !== 'string') {
@@ -78,10 +70,7 @@ function boardButtonsHandler(t) {
   return t.get('board', 'shared', VACATIONS_STORAGE_KEY, { version: 1, members: {} })
   .then(function(vacations) {
     return [{
-      icon: {
-        dark: resolveAssetUrl(VACATIONS_ICON),
-        light: resolveAssetUrl(VACATIONS_ICON),
-      },
+      icon: './images/icon.png',
       text: '(' + countActiveVacations(vacations) + ')',
       callback: openVacationsModal,
       condition: 'signedIn',
