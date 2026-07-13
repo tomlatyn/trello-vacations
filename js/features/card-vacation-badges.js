@@ -144,7 +144,7 @@ function cardBadgesHandler(t) {
     return [{
       icon: resolveVacationBadgeIconUrl(VACATION_BADGE_ICON),
       text: String(activeVacations.length),
-      color: 'red',
+      color: 'orange',
     }];
   });
 }
@@ -155,12 +155,15 @@ function cardDetailBadgesHandler(t) {
       return [];
     }
 
-    return activeVacations.map(function(item) {
-      return {
-        title: item.name,
-        text: formatVacationBadgeDate(item.range.start) + ' - ' + formatVacationBadgeDate(item.range.end),
-        color: 'red',
-      };
-    });
+    var text = activeVacations.map(function(vacation) {
+      return vacation.name + ' · ' + formatVacationBadgeDate(vacation.range.start) + ' - ' + formatVacationBadgeDate(vacation.range.end);
+    }).join('  •  ');
+
+    return [{
+      title: activeVacations.length === 1 ? 'Vacation' : 'Vacations',
+      text: text,
+      color: 'orange',
+      callback: openVacationsModal,
+    }];
   });
 }

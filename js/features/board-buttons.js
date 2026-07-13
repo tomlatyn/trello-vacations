@@ -65,6 +65,15 @@ function countActiveVacations(vacations) {
   }).length;
 }
 
+function openVacationsModal(t) {
+  return t.modal({
+    url: './views/vacations.html',
+    fullscreen: true,
+    title: 'Vacations',
+    accentColor: '#0c66e4',
+  });
+}
+
 function boardButtonsHandler(t) {
   return t.get('board', 'shared', VACATIONS_STORAGE_KEY, { version: 1, members: {} })
   .then(function(vacations) {
@@ -74,14 +83,7 @@ function boardButtonsHandler(t) {
         light: resolveAssetUrl(VACATIONS_ICON),
       },
       text: '(' + countActiveVacations(vacations) + ')',
-      callback: function(t) {
-        return t.modal({
-          url: './views/vacations.html',
-          fullscreen: true,
-          title: 'Vacations',
-          accentColor: '#c9372c',
-        });
-      },
+      callback: openVacationsModal,
       condition: 'signedIn',
     }];
   });
