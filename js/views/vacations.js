@@ -309,6 +309,9 @@ function initDatePickers() {
     altInput: true,
     altFormat: 'd.m.Y',
     dateFormat: 'Y-m-d',
+    locale: {
+      firstDayOfWeek: 1,
+    },
     allowInput: true,
     disableMobile: true,
   };
