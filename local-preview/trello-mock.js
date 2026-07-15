@@ -53,6 +53,12 @@ var TrelloMock = (function() {
               end: formatDateOnly(addDays(today, 70)),
               note: 'Autumn break',
             },
+            {
+              id: 'preview-current-user-distant',
+              start: formatDateOnly(addDays(today, 145)),
+              end: formatDateOnly(addDays(today, 150)),
+              note: 'Distant holiday',
+            },
           ],
         },
         user456: {
@@ -112,6 +118,27 @@ var TrelloMock = (function() {
               start: formatDateOnly(addDays(today, 76)),
               end: formatDateOnly(addDays(today, 82)),
               note: 'Mountain trip',
+            },
+            {
+              id: 'preview-tom-distant',
+              start: formatDateOnly(addDays(today, 210)),
+              end: formatDateOnly(addDays(today, 222)),
+              note: 'Long-haul trip',
+            },
+          ],
+        },
+        user303: {
+          memberId: 'user303',
+          fullName: 'Lisa Davis',
+          username: 'lisad',
+          initials: 'LD',
+          updatedAt: new Date().toISOString(),
+          ranges: [
+            {
+              id: 'preview-lisa-distant',
+              start: formatDateOnly(addDays(today, 320)),
+              end: formatDateOnly(addDays(today, 326)),
+              note: 'Winter break',
             },
           ],
         },

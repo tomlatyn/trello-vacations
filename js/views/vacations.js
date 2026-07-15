@@ -197,6 +197,22 @@ function buildDaysBetween(start, end) {
   return days;
 }
 
+function getScheduleEnd(today) {
+  var latest = addDays(today, DAYS_TO_SHOW - 1);
+
+  Object.keys(state.vacations.members).forEach(function(memberId) {
+    getValidRanges(getStoredMember(memberId)).forEach(function(range) {
+      var end = parseDateOnly(range.end);
+
+      if (end && end > latest) {
+        latest = end;
+      }
+    });
+  });
+
+  return latest;
+}
+
 function isRangeActiveOn(range, date) {
   if (!range) {
     return false;
@@ -699,7 +715,7 @@ function renderTimeline() {
   var activeCount = document.getElementById('active-count');
   var scheduleActiveCount = document.getElementById('schedule-active-count');
   var today = todayDateOnly();
-  var days = buildDaysFrom(today, DAYS_TO_SHOW);
+  var days = buildDaysBetween(today, getScheduleEnd(today));
   var activeMemberIds = [];
 
   Object.keys(state.vacations.members).forEach(function(memberId) {

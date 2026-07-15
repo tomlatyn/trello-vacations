@@ -229,6 +229,10 @@ h2 {
 }
 
 .history-close-button {
+  flex: 0 0 30px;
+  align-self: center;
+  margin: 0;
+  padding: 0;
   color: var(--muted);
 }
 
