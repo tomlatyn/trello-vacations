@@ -36,7 +36,7 @@ current Trello member edit their own ranges.
 
 ## Local Preview
 
-Run a static server from this folder:
+Run a static server from the repository root:
 
 ```sh
 python3 -m http.server 8080
@@ -45,7 +45,7 @@ python3 -m http.server 8080
 Then open:
 
 ```text
-http://localhost:8080/local-preview/
+http://localhost:8080/local-preview/vacations/
 ```
 
 The preview uses seeded localStorage data and a mock Trello SDK.
