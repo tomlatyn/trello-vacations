@@ -151,20 +151,30 @@ function sortRangesFromFurthest(ranges) {
   });
 }
 
-function getMembersWithVacations() {
+function getMembersWithVacations(options) {
+  var upcomingOnly = options && options.upcomingOnly;
+  var today = upcomingOnly ? todayDateOnly() : null;
+
   return Object.keys(state.vacations.members)
     .map(function(memberId) {
       var boardMember = state.boardMembers.find(function(member) {
         return member.id === memberId;
       });
       var stored = getStoredMember(memberId);
+      var ranges = getValidRanges(stored);
+
+      if (upcomingOnly) {
+        ranges = ranges.filter(function(range) {
+          return !isRangeFinished(range, today);
+        });
+      }
 
       return {
         id: memberId,
         fullName: stored.fullName || (boardMember && boardMember.fullName),
         username: stored.username || (boardMember && boardMember.username),
         initials: stored.initials || (boardMember && boardMember.initials),
-        ranges: getValidRanges(stored),
+        ranges: ranges,
       };
     })
     .filter(function(member) {
@@ -729,7 +739,7 @@ function renderTimeline() {
 
   activeCount.textContent = activeMemberIds.length;
   scheduleActiveCount.textContent = formatActiveCountText(activeMemberIds.length);
-  renderScheduleGrid(timeline, days, getMembersWithVacations(), 'No vacations have been saved on this board yet.');
+  renderScheduleGrid(timeline, days, getMembersWithVacations({ upcomingOnly: true }), 'No vacations have been saved on this board yet.');
 }
 
 function ensureCurrentMemberRecord(vacations) {
