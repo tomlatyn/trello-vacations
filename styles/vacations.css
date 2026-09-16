@@ -84,25 +84,37 @@ h2 {
 
 .schedule-active-count {
   color: var(--vacation);
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .active-count {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   justify-content: center;
-  padding: 5px 10px;
+  padding: 4px 10px;
   border-radius: 6px;
   background: var(--vacation-bg);
   border: 1px solid rgba(201, 55, 44, 0.2);
   color: var(--vacation);
-  font-weight: 600;
 }
 
 .active-count-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 11px;
+  background: rgba(174, 46, 36, 0.12);
+  border: 1px solid rgba(174, 46, 36, 0.2);
+  color: var(--vacation);
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1;
 }
 
 .active-count svg,
@@ -774,7 +786,9 @@ body.dark-mode .active-count {
 }
 
 body.dark-mode .active-count-number {
-  color: #ffd5d2;
+  background: rgba(248, 113, 104, 0.22);
+  border: 1px solid rgba(248, 113, 104, 0.36);
+  color: var(--vacation);
 }
 
 body.dark-mode .schedule-active-count {
