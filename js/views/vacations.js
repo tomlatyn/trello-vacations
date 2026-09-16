@@ -278,14 +278,101 @@ function getValidRanges(member) {
 }
 
 function normalizeVacations(raw) {
-  var vacations = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  var vacations = raw;
 
-  if (!vacations.members || typeof vacations.members !== 'object' || Array.isArray(vacations.members)) {
-    vacations.members = {};
+  if (typeof vacations === 'string') {
+    try {
+      vacations = JSON.parse(vacations);
+    } catch (e) {
+      vacations = null;
+    }
   }
 
-  vacations.version = vacations.version || 1;
-  return vacations;
+  if (!vacations || typeof vacations !== 'object' || Array.isArray(vacations)) {
+    return { version: 2, members: {} };
+  }
+
+  var rawMembers = vacations.members || vacations.m || {};
+  var normalized = {
+    version: 2,
+    members: {},
+  };
+
+  Object.keys(rawMembers).forEach(function(memberId) {
+    var entry = rawMembers[memberId];
+    var ranges = [];
+
+    if (Array.isArray(entry)) {
+      entry.forEach(function(r) {
+        if (Array.isArray(r) && r[0] && r[1]) {
+          ranges.push({
+            id: r[2] || (r[0] + '_' + r[1]),
+            start: r[0],
+            end: r[1],
+          });
+        } else if (r && typeof r === 'object' && r.start && r.end) {
+          ranges.push({
+            id: r.id || (r.start + '_' + r.end),
+            start: r.start,
+            end: r.end,
+          });
+        }
+      });
+    } else if (entry && typeof entry === 'object') {
+      var oldRanges = Array.isArray(entry.ranges) ? entry.ranges : [];
+      oldRanges.forEach(function(r) {
+        if (r && r.start && r.end) {
+          ranges.push({
+            id: r.id || (r.start + '_' + r.end),
+            start: r.start,
+            end: r.end,
+          });
+        }
+      });
+    }
+
+    if (ranges.length > 0) {
+      normalized.members[memberId] = {
+        memberId: memberId,
+        ranges: ranges,
+      };
+    }
+  });
+
+  return normalized;
+}
+
+function serializeVacations(vacations) {
+  var today = todayDateOnly();
+  var cutoff = addDays(today, -365);
+  var compact = {
+    version: 2,
+    members: {},
+  };
+  var members = vacations && vacations.members ? vacations.members : {};
+
+  Object.keys(members).forEach(function(memberId) {
+    var member = members[memberId];
+    var ranges = member && Array.isArray(member.ranges) ? member.ranges : [];
+    var list = [];
+
+    ranges.forEach(function(range) {
+      var start = range && parseDateOnly(range.start);
+      var end = range && parseDateOnly(range.end);
+
+      if (start && end && start <= end) {
+        if (end >= cutoff) {
+          list.push([formatDateOnly(start), formatDateOnly(end)]);
+        }
+      }
+    });
+
+    if (list.length > 0) {
+      compact.members[memberId] = list;
+    }
+  });
+
+  return compact;
 }
 
 function loadData() {
@@ -308,8 +395,9 @@ function loadData() {
 }
 
 function saveVacations(vacations) {
-  return t.set('board', 'shared', STORAGE_KEY, vacations).then(function() {
-    state.vacations = vacations;
+  var serialized = serializeVacations(vacations);
+  return t.set('board', 'shared', STORAGE_KEY, serialized).then(function() {
+    state.vacations = normalizeVacations(serialized);
   });
 }
 
@@ -753,16 +841,11 @@ function ensureCurrentMemberRecord(vacations) {
     };
   }
 
-  target.members[member.id].fullName = member.fullName;
-  target.members[member.id].username = member.username;
-  target.members[member.id].initials = member.initials;
-  target.members[member.id].updatedAt = new Date().toISOString();
-
   return target.members[member.id];
 }
 
 function createRangeId() {
-  return state.currentMember.id + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+  return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
 }
 
 function addRange(event) {

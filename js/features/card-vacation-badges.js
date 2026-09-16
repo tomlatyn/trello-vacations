@@ -53,8 +53,10 @@ function isVacationBadgeRangeActive(range, today) {
     return false;
   }
 
-  var start = parseVacationBadgeDate(range.start);
-  var end = parseVacationBadgeDate(range.end);
+  var startStr = Array.isArray(range) ? range[0] : range.start;
+  var endStr = Array.isArray(range) ? range[1] : range.end;
+  var start = parseVacationBadgeDate(startStr);
+  var end = parseVacationBadgeDate(endStr);
 
   if (!start || !end) {
     return false;
@@ -82,10 +84,20 @@ function getVacationMemberName(memberRecord, boardMember, memberId) {
     memberId;
 }
 
-function getActiveCardVacations(card, vacations, boardMembers) {
+function getActiveCardVacations(card, rawVacations, boardMembers) {
   var today = todayVacationBadgeDate();
   var members = getCardMembers(card);
-  var vacationMembers = vacations && vacations.members ? vacations.members : {};
+  var vacations = rawVacations;
+
+  if (typeof vacations === 'string') {
+    try {
+      vacations = JSON.parse(vacations);
+    } catch (e) {
+      vacations = null;
+    }
+  }
+
+  var vacationMembers = vacations && (vacations.members || vacations.m) ? (vacations.members || vacations.m) : {};
 
   return members.map(function(member) {
     var memberId = getCardMemberId(member);
@@ -95,7 +107,7 @@ function getActiveCardVacations(card, vacations, boardMembers) {
     }
 
     var memberRecord = vacationMembers[memberId];
-    var ranges = memberRecord && Array.isArray(memberRecord.ranges) ? memberRecord.ranges : [];
+    var ranges = Array.isArray(memberRecord) ? memberRecord : (memberRecord && Array.isArray(memberRecord.ranges) ? memberRecord.ranges : []);
     var activeRange = ranges.find(function(range) {
       return isVacationBadgeRangeActive(range, today);
     });
@@ -108,10 +120,14 @@ function getActiveCardVacations(card, vacations, boardMembers) {
       return item.id === memberId;
     });
 
+    var normalizedRange = Array.isArray(activeRange)
+      ? { start: activeRange[0], end: activeRange[1] }
+      : activeRange;
+
     return {
       id: memberId,
       name: getVacationMemberName(memberRecord, boardMember, memberId),
-      range: activeRange,
+      range: normalizedRange,
     };
   }).filter(Boolean);
 }

@@ -280,6 +280,13 @@ h2 {
   border-bottom: 1px solid var(--border);
 }
 
+.history-subtitle {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
 .history-content {
   display: flex;
   flex-direction: column;

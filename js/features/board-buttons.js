@@ -33,8 +33,10 @@ function isVacationActive(range, today) {
     return false;
   }
 
-  var start = parseDateOnly(range.start);
-  var end = parseDateOnly(range.end);
+  var startStr = Array.isArray(range) ? range[0] : range.start;
+  var endStr = Array.isArray(range) ? range[1] : range.end;
+  var start = parseDateOnly(startStr);
+  var end = parseDateOnly(endStr);
 
   if (!start || !end) {
     return false;
@@ -43,13 +45,23 @@ function isVacationActive(range, today) {
   return start <= today && today <= end;
 }
 
-function countActiveVacations(vacations) {
+function countActiveVacations(raw) {
   var today = todayDateOnly();
-  var members = vacations && vacations.members ? vacations.members : {};
+  var vacations = raw;
+
+  if (typeof vacations === 'string') {
+    try {
+      vacations = JSON.parse(vacations);
+    } catch (e) {
+      vacations = null;
+    }
+  }
+
+  var members = vacations && (vacations.members || vacations.m) ? (vacations.members || vacations.m) : {};
 
   return Object.keys(members).filter(function(memberId) {
     var member = members[memberId];
-    var ranges = member && Array.isArray(member.ranges) ? member.ranges : [];
+    var ranges = Array.isArray(member) ? member : (member && Array.isArray(member.ranges) ? member.ranges : []);
 
     return ranges.some(function(range) {
       return isVacationActive(range, today);
