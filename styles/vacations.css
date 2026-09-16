@@ -96,6 +96,7 @@ h2 {
   padding: 5px 10px;
   border-radius: 6px;
   background: var(--vacation-bg);
+  border: 1px solid rgba(201, 55, 44, 0.2);
   color: var(--vacation);
   font-weight: 600;
 }
@@ -364,7 +365,7 @@ h2 {
 }
 
 .timeline-day-row {
-  background: #f1f2f4;
+  background: #ffffff;
   border-bottom: 1px solid var(--border);
 }
 
@@ -416,7 +417,7 @@ h2 {
 
 .member-day-header {
   min-height: 40px;
-  background: #f1f2f4;
+  background: #ffffff;
   border-bottom: 1px solid var(--border);
 }
 
@@ -464,8 +465,19 @@ h2 {
   background: #e9f2ff;
 }
 
+.header-day.today .weekday-label,
+.header-day.today .date-number {
+  color: var(--blue);
+  font-weight: 800;
+}
+
 .day-cell.weekend {
   background: #f7f8f9;
+}
+
+.header-day.weekend .weekday-label,
+.header-day.weekend .date-number {
+  color: #8c9bab;
 }
 
 .day-cell.month-start {
@@ -477,7 +489,15 @@ h2 {
 }
 
 .day-cell.vacation {
-  background: var(--vacation-bg);
+  background: transparent;
+}
+
+.day-cell.vacation.weekend {
+  background: #f7f8f9;
+}
+
+.day-cell.vacation.today {
+  background: #e9f2ff;
 }
 
 .day-cell.vacation::after {
@@ -486,6 +506,7 @@ h2 {
   inset: 9px -1px;
   border-radius: 0;
   background: var(--vacation-bar);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .day-cell.vacation-start::after {
