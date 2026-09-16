@@ -73,6 +73,25 @@ function formatRangeDisplay(range) {
   return formatDisplayDateValue(range.start) + ' - ' + formatDisplayDateValue(range.end);
 }
 
+function getRangeDaysCount(range) {
+  if (!range) return 0;
+  var start = parseDateOnly(range.start);
+  var end = parseDateOnly(range.end);
+  if (!start || !end) return 0;
+  var diffMs = end.getTime() - start.getTime();
+  var days = Math.round(diffMs / 86400000) + 1;
+  return Math.max(1, days);
+}
+
+function formatDuration(days) {
+  return days === 1 ? '1 day' : days + ' days';
+}
+
+function formatRangeWithDuration(range) {
+  var days = getRangeDaysCount(range);
+  return formatRangeDisplay(range) + ' (' + formatDuration(days) + ')';
+}
+
 function addDays(date, days) {
   var next = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   next.setDate(next.getDate() + days);
@@ -512,11 +531,37 @@ function createRangeSection(title, ranges, isOpen, emptyText) {
 function createRangeItem(range, canRemove) {
   var item = document.createElement('div');
   item.className = 'range-item';
+  var rangeKey = (state.currentMember ? state.currentMember.id : '') + '_' + (range.id || (range.start + '_' + range.end));
+  item.setAttribute('data-range-key', rangeKey);
+
+  item.addEventListener('mouseenter', function() {
+    var timeline = document.getElementById('timeline');
+    if (timeline) {
+      timeline.querySelectorAll('.day-cell[data-range-key="' + rangeKey + '"]').forEach(function(c) {
+        c.classList.add('vacation-hover');
+      });
+    }
+  });
+
+  item.addEventListener('mouseleave', function() {
+    var timeline = document.getElementById('timeline');
+    if (timeline) {
+      timeline.querySelectorAll('.day-cell[data-range-key="' + rangeKey + '"]').forEach(function(c) {
+        c.classList.remove('vacation-hover');
+      });
+    }
+  });
 
   var details = document.createElement('div');
   var title = document.createElement('div');
   title.className = 'range-title';
   title.textContent = formatRangeDisplay(range);
+
+  var duration = document.createElement('span');
+  duration.className = 'range-duration';
+  duration.textContent = formatDuration(getRangeDaysCount(range));
+  title.appendChild(duration);
+
   details.appendChild(title);
 
   item.appendChild(details);
@@ -527,7 +572,7 @@ function createRangeItem(range, canRemove) {
     remove.type = 'button';
     remove.title = 'Remove vacation';
     remove.setAttribute('aria-label', 'Remove vacation');
-    remove.textContent = '×';
+    remove.innerHTML = '<svg class="close-icon" viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 1l12 12M13 1L1 13"/></svg>';
     remove.addEventListener('click', function() {
       removeRange(range.id);
     });
@@ -563,6 +608,7 @@ function getHistoryEntries() {
 function getHistoryDateBounds(entries) {
   var starts = [];
   var ends = [];
+  var today = todayDateOnly();
 
   entries.forEach(function(entry) {
     var start = parseDateOnly(entry.range.start);
@@ -577,9 +623,26 @@ function getHistoryDateBounds(entries) {
     }
   });
 
+  if (starts.length === 0) {
+    return {
+      start: today,
+      end: today,
+    };
+  }
+
+  var minStart = new Date(Math.min.apply(null, starts));
+  var maxEnd = new Date(Math.max.apply(null, ends));
+
+  if (today < minStart) {
+    minStart = today;
+  }
+  if (today > maxEnd) {
+    maxEnd = today;
+  }
+
   return {
-    start: new Date(Math.min.apply(null, starts)),
-    end: new Date(Math.max.apply(null, ends)),
+    start: minStart,
+    end: maxEnd,
   };
 }
 
@@ -687,8 +750,16 @@ function renderScheduleGrid(container, days, membersWithVacations, emptyText) {
   datesCanvas.appendChild(dayRow);
 
   membersWithVacations.forEach(function(member, memberIndex) {
+    var isCurrent = state.currentMember && (
+      (member.memberId && member.memberId === state.currentMember.id) ||
+      (member.id && member.id === state.currentMember.id)
+    );
+
     var memberCell = document.createElement('div');
     memberCell.className = 'member-cell member-row-cell';
+    if (isCurrent) {
+      memberCell.classList.add('is-current-user');
+    }
 
     if (memberIndex === membersWithVacations.length - 1) {
       memberCell.classList.add('last-row');
@@ -703,15 +774,82 @@ function renderScheduleGrid(container, days, membersWithVacations, emptyText) {
 
     memberCell.appendChild(avatar);
     memberCell.appendChild(name);
+
+    if (isCurrent) {
+      var youBadge = document.createElement('span');
+      youBadge.className = 'you-badge';
+      youBadge.textContent = 'You';
+      memberCell.appendChild(youBadge);
+    }
+
     memberLane.appendChild(memberCell);
 
     var row = document.createElement('div');
     row.className = 'timeline-row';
+    if (isCurrent) {
+      row.classList.add('is-current-user');
+    }
     setGridColumns(row, days);
 
     if (memberIndex === membersWithVacations.length - 1) {
       row.classList.add('last-row');
     }
+
+    (function(mCell, tRow) {
+      function addHover() {
+        mCell.classList.add('row-hover');
+        tRow.classList.add('row-hover');
+      }
+      function removeHover() {
+        mCell.classList.remove('row-hover');
+        tRow.classList.remove('row-hover');
+      }
+      mCell.addEventListener('mouseenter', addHover);
+      mCell.addEventListener('mouseleave', removeHover);
+      tRow.addEventListener('mouseenter', addHover);
+      tRow.addEventListener('mouseleave', removeHover);
+
+      tRow.addEventListener('mouseover', function(e) {
+        var vCell = e.target.closest('.day-cell.vacation');
+        var key = vCell && vCell.getAttribute('data-range-key');
+        var related = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.day-cell.vacation') : null;
+        var relatedKey = related && related.getAttribute('data-range-key');
+        if (key && key !== relatedKey) {
+          tRow.querySelectorAll('.day-cell[data-range-key="' + key + '"]').forEach(function(c) {
+            c.classList.add('vacation-hover');
+          });
+          var leftItem = document.querySelector('.range-item[data-range-key="' + key + '"]');
+          if (leftItem) {
+            leftItem.classList.add('range-item-hover');
+          }
+        }
+      });
+
+      tRow.addEventListener('mouseout', function(e) {
+        var vCell = e.target.closest('.day-cell.vacation');
+        var key = vCell && vCell.getAttribute('data-range-key');
+        var related = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest('.day-cell.vacation') : null;
+        var relatedKey = related && related.getAttribute('data-range-key');
+        if (key && key !== relatedKey) {
+          tRow.querySelectorAll('.day-cell[data-range-key="' + key + '"]').forEach(function(c) {
+            c.classList.remove('vacation-hover');
+          });
+          var leftItem = document.querySelector('.range-item[data-range-key="' + key + '"]');
+          if (leftItem) {
+            leftItem.classList.remove('range-item-hover');
+          }
+        }
+      });
+
+      tRow.addEventListener('mouseleave', function() {
+        tRow.querySelectorAll('.day-cell.vacation-hover').forEach(function(c) {
+          c.classList.remove('vacation-hover');
+        });
+        document.querySelectorAll('.range-item.range-item-hover').forEach(function(item) {
+          item.classList.remove('range-item-hover');
+        });
+      });
+    })(memberCell, row);
 
     days.forEach(function(day) {
       var cell = document.createElement('div');
@@ -737,6 +875,8 @@ function renderScheduleGrid(container, days, membersWithVacations, emptyText) {
 
       if (vacation) {
         classes.push('vacation');
+        var rangeKey = (member.memberId || member.id) + '_' + (vacation.id || (vacation.start + '_' + vacation.end));
+        cell.setAttribute('data-range-key', rangeKey);
 
         if (isSameDay(day, parseDateOnly(vacation.start))) {
           classes.push('vacation-start');
@@ -746,7 +886,7 @@ function renderScheduleGrid(container, days, membersWithVacations, emptyText) {
           classes.push('vacation-end');
         }
 
-        cell.title = formatRangeDisplay(vacation);
+        cell.title = getMemberName(member) + ': ' + formatRangeWithDuration(vacation);
       }
 
       cell.className = classes.join(' ');
@@ -798,7 +938,7 @@ function openHistory() {
 
   if (timeline) {
     window.requestAnimationFrame(function() {
-      scrollScheduleToEnd(timeline);
+      scrollToToday(timeline, 'auto');
     });
   }
 }
@@ -921,7 +1061,46 @@ function removeRange(rangeId) {
     });
 }
 
+function scrollToToday(timelineElement, behavior) {
+  var root = timelineElement;
+  if (!root) {
+    var historyPanel = document.getElementById('history-panel');
+    if (historyPanel && !historyPanel.classList.contains('hidden')) {
+      root = historyPanel.querySelector('.history-timeline');
+    }
+  }
+  if (!root) {
+    root = document.getElementById('timeline');
+  }
+  if (!root) return;
+  var datesScroll = root.querySelector('.dates-scroll');
+  var datesCanvas = root.querySelector('.dates-canvas');
+  var todayCell = root.querySelector('.header-day.today');
+  var scrollBehavior = behavior || 'smooth';
+  if (todayCell && datesScroll && datesCanvas) {
+    var canvasRect = datesCanvas.getBoundingClientRect();
+    var cellRect = todayCell.getBoundingClientRect();
+    var target = Math.max(0, Math.round(cellRect.left - canvasRect.left));
+    datesScroll.scrollTo({ left: target, behavior: scrollBehavior });
+  } else if (datesScroll) {
+    datesScroll.scrollTo({ left: 0, behavior: scrollBehavior });
+  }
+}
+
 document.getElementById('vacation-form').addEventListener('submit', addRange);
+var todayBtn = document.getElementById('today-button');
+if (todayBtn) {
+  todayBtn.addEventListener('click', function() {
+    scrollToToday();
+  });
+}
+var historyTodayBtn = document.getElementById('history-today-button');
+if (historyTodayBtn) {
+  historyTodayBtn.addEventListener('click', function() {
+    var historyTimeline = document.querySelector('.history-timeline');
+    scrollToToday(historyTimeline);
+  });
+}
 document.getElementById('history-button').addEventListener('click', openHistory);
 document.getElementById('history-close-button').addEventListener('click', closeHistory);
 document.getElementById('history-panel').addEventListener('click', function(event) {
